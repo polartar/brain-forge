@@ -1,0 +1,47 @@
+.email-verify {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100vw;
+  height: 100vh;
+  text-align: center;
+
+  &__message {
+    position: absolute;
+    left: 50%;
+    top: 200px;
+    transform: translateX(-50%);
+
+    h1 {
+      text-transform: uppercase;
+      font-size: 40px;
+    }
+
+    h1,
+    h3 {
+      color: #888;
+    }
+  }
+
+  &__icon {
+    font-size: 50px;
+
+    &.loading {
+      color: #1890ff;
+    }
+
+    &.success {
+      color: #52c41a;
+    }
+
+    &.fail {
+      color: #f5222d;
+    }
+  }
+
+  &__goto-home,
+  &__goto-login {
+    color: #1890ff;
+    cursor: pointer;
+  }
+}

@@ -1,0 +1,166 @@
+div#root {
+  height: 100%;
+}
+
+div.app-main {
+  height: 100%;
+}
+
+body {
+  line-height: normal;
+}
+
+.ant {
+  &-table-body {
+    margin: 0 !important;
+  }
+
+  &-table-thead > tr > th {
+    background-color: #fafafa !important;
+  }
+
+  &-table-row {
+    &:hover td {
+      background-color: transparent !important;
+    }
+  }
+
+  &-alert-message p {
+    margin-bottom: 0 !important;
+  }
+
+  &-card-hoverable {
+    cursor: default;
+  }
+
+  &-empty-normal {
+    margin: 0;
+  }
+
+  &-alert-description {
+    word-break: break-all;
+  }
+
+  &-form-item {
+    margin-bottom: 10px;
+  }
+
+  &-alert-with-description {
+    white-space: pre-wrap;
+  }
+
+  &-upload {
+    width: 100%;
+  }
+
+  &-select-dropdown-menu-item {
+    overflow: initial;
+    text-overflow: initial;
+  }
+}
+
+.card-title {
+  cursor: pointer;
+}
+
+.managed-study-analysis-table {
+  .ant-table {
+    border: none !important;
+  }
+
+  .ant-table-thead > tr > th,
+  .ant-table-tbody > tr > td {
+    border-right: none !important;
+  }
+}
+
+.transparent-back {
+  background-color: rgba(0, 0, 0, 0.02);
+  z-index: 100;
+}
+
+.react-confirm-alert-overlay {
+  background-color: rgba(0, 0, 0, 0.65);
+}
+
+.react-confirm-alert {
+  &-body {
+    border-radius: 2px;
+  }
+}
+
+h1,
+h2,
+h3,
+h4,
+h5 {
+  color: inherit;
+}
+
+.Toastify {
+  &__toast {
+    padding: 8px 20px;
+    margin-bottom: 0;
+    min-height: 50px;
+
+    &-container {
+      padding: 0;
+      width: auto;
+
+      &--bottom-center {
+        bottom: 0;
+      }
+    }
+
+    &--error {
+      background: #f5222d;
+      border-radius: 4px 4px 0 0;
+    }
+  }
+
+  &__close-button {
+    display: none;
+  }
+
+  &__progress-bar {
+    height: 3px;
+    background-color: rgba(255, 255, 255, 0.3);
+  }
+}
+
+.w-33 {
+  width: 33%;
+
+  @include media-breakpoint-down(md) {
+    width: 100%;
+  }
+}
+
+.w-50 {
+  width: 50%;
+  margin: 0 auto;
+
+  @include media-breakpoint-down(md) {
+    width: 100%;
+  }
+}
+
+.w-75 {
+  width: 75%;
+  margin: 0 auto;
+
+  @include media-breakpoint-down(md) {
+    width: 100%;
+  }
+}
+
+.w-100 {
+  width: 100%;
+}
+
+.download-help {
+  li {
+    list-style-type: decimal !important;
+    margin-top: 1rem !important;
+  }
+}

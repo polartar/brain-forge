@@ -1,0 +1,229 @@
+.analysis-result {
+  text-align: center;
+
+  &__heading {
+    font-size: 1.5rem;
+    margin: 1.5rem 0;
+  }
+
+  &__subheading {
+    font-size: 1rem;
+    margin: 1rem 0;
+  }
+
+  &__description {
+    width: 33.3%;
+    word-break: break-word;
+    margin: 0 auto;
+
+    @include media-breakpoint-down(md) {
+      width: 100%;
+    }
+  }
+}
+
+.analysis-run {
+  .ant-tabs-bar {
+    margin-bottom: 0;
+    border-width: 0;
+  }
+
+  .ant-tabs-tab {
+    background: #fff !important;
+    border: 1px solid #d9d9d9 !important;
+    margin-right: 3px;
+    border-radius: 4px 4px 0 0;
+  }
+
+  .ant-tabs-tab-active {
+    border-bottom-width: 0 !important;
+  }
+
+  .ant-tabs-content {
+    margin-top: 1px;
+  }
+
+  &__content {
+    padding: 25px 45px;
+    background-color: #fff;
+  }
+}
+
+.analysis-computation {
+  padding-top: 25px;
+
+  &__title {
+    font-size: 18px;
+    line-height: 21px;
+    color: #001529;
+  }
+
+  &__subtitle {
+    font-size: 11px;
+    line-height: 21px;
+    color: rgba(0, 0, 0, 0.5);
+    border-bottom: 1px solid #ccc;
+    width: max-content;
+    padding-top: 2px;
+    margin-bottom: 16px;
+
+    @include media-breakpoint-down(sm) {
+      margin-bottom: 5px;
+    }
+  }
+}
+
+.analysis-detail {
+  padding: 25px 0 35px 40px;
+  border-width: 0 0 0 1px;
+  border-style: solid;
+  border-color: #ccc;
+
+  @include media-breakpoint-down(md) {
+    padding: 25px 0 0 0;
+    border-width: 1px 0 0 0;
+  }
+
+  &__name {
+    font-weight: bold;
+    font-size: 24px;
+    line-height: 21px;
+    color: #001529;
+  }
+
+  &__description {
+    font-size: 14px;
+    line-height: 21px;
+    color: rgba(0, 0, 0, 0.65);
+    width: 400px;
+    padding-top: 12px;
+    max-width: 100%;
+
+    @include media-breakpoint-down(sm) {
+      width: initial;
+    }
+  }
+
+  &__image {
+    height: 200px;
+
+    @include media-breakpoint-down(md) {
+      margin-top: 20px;
+    }
+  }
+
+  &__image img {
+    max-width: 100%;
+    max-height: 100%;
+  }
+}
+
+.analysis-solution-links {
+  @include media-breakpoint-down(md) {
+    margin-top: 20px;
+    display: flex;
+  }
+}
+
+.analysis-solution-link {
+  font-size: 12px;
+  line-height: 20px;
+  color: rgba(0, 0, 0, 0.45);
+  padding: 8px;
+  cursor: pointer;
+
+  @include media-breakpoint-down(md) {
+    text-align: center;
+  }
+
+  &--active {
+    color: #1890ff;
+    background-color: #e6f7ff;
+    border-style: solid;
+    border-color: #1890ff;
+    border-width: 0 3px 0 0;
+
+    @include media-breakpoint-down(md) {
+      border-width: 0 0 3px 0;
+    }
+  }
+}
+
+.analysis-solution {
+  &__title {
+    font-weight: bold;
+    font-size: 24px;
+    line-height: 21px;
+    color: #001529;
+    margin-bottom: 36px;
+  }
+
+  &__button {
+    display: block;
+    width: 100%;
+    margin-top: 12px;
+  }
+}
+
+.analysis-start-widget {
+  &-heading {
+    font-weight: bold;
+    font-size: 24px;
+    line-height: 21px;
+    color: #595959;
+    padding-bottom: 15px;
+    margin-bottom: 15px;
+    border-bottom: 1px solid #e8e8e8;
+  }
+}
+
+.analysis-selector {
+  display: flex;
+  align-items: center;
+  margin-bottom: 1rem;
+
+  @include media-breakpoint-down(md) {
+    display: block;
+  }
+
+  .ant-select-selection {
+    max-height: 140px;
+    overflow: auto;
+  }
+}
+
+.analysis-legend {
+  border-radius: 4px;
+  border-color: #d9d9d9;
+  margin-top: 1rem;
+
+  .ant-card-body {
+    padding: 12px;
+    min-height: 31px;
+  }
+
+  &-item {
+    display: flex;
+    align-items: center;
+  }
+
+  &-mark {
+    display: block;
+    width: 10px;
+    height: 10px;
+    margin-right: 5px;
+    border-radius: 4px;
+  }
+}
+
+.analysis-summary {
+  &-heading {
+    font-size: 20px;
+    text-align: center;
+    padding-bottom: 20px;
+  }
+
+  @include media-breakpoint-down(md) {
+    margin-top: 1rem;
+  }
+}

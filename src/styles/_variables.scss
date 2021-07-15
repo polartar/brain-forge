@@ -1,0 +1,19 @@
+$white: #fff;
+
+$summary-tag-colors: (
+  running: #1890ff,
+  complete: #a0d911,
+  error: #f5222d,
+  no-data: #f5f5f5,
+);
+
+$grid-breakpoints: (
+  xs: 0,
+  sm: 576px,
+  md: 768px,
+  lg: 992px,
+  xl: 1200px,
+  xxl: 1440px,
+);
+
+$animation-speed: 200ms;

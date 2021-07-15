@@ -1,0 +1,18 @@
+{
+  "extends": "react-app",
+  "plugins": ["react"],
+  "rules": {
+    "react/boolean-prop-naming": [2],
+    "react/default-props-match-prop-types": [2],
+    "react/no-multi-comp": [2, { "ignoreStateless": true }],
+    "react/no-this-in-sfc": [2],
+    "react/no-unknown-property": [1],
+    "react/no-unused-prop-types": [0],
+    "react/no-unused-state": [2],
+    "react/prefer-es6-class": [2],
+    "react/prefer-stateless-function": [2],
+    "react/prop-types": [2],
+    "react/self-closing-comp": [2]
+  },
+  "parser": "babel-eslint"
+}

@@ -1,0 +1,29 @@
+.data-directory-analysis-configuration {
+  margin-left: 20px;
+  padding-left: 20px;
+  border-left: 1px solid #ccc;
+
+  &__title {
+    font-size: 20px;
+    text-align: center;
+    font-weight: bold;
+    margin-bottom: 20px;
+  }
+
+  @include media-breakpoint-down(sm) {
+    border-left-width: 0;
+    margin: 40px 0 0 0;
+    padding: 0;
+  }
+}
+
+.data-directory-table {
+  .ant-table-thead > tr > th,
+  .ant-table-tbody > tr > td {
+    padding: 8px;
+  }
+
+  &__expanded {
+    margin: 0 !important;
+  }
+}
