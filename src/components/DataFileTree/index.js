@@ -1,8 +1,9 @@
 import React, { useEffect, useState, useCallback } from 'react'
+import { unstable_batchedUpdates } from 'react-dom'
 import PropTypes from 'prop-types'
 import axios from 'axios'
 import qs from 'qs'
-import { TreeSelect, Spin, Switch } from 'antd'
+import { Button, TreeSelect, Spin, Switch } from 'antd'
 import {
   debounce,
   find,
@@ -18,6 +19,7 @@ import {
   values,
   uniqBy,
   uniq,
+  zipWith,
 } from 'lodash'
 import { stringify } from 'query-string'
 import { ANALYSIS_ALLOWED_FILE_TYPES, MAX_SELECT_FILES } from 'config/base'
@@ -45,7 +47,7 @@ const LABEL_MAP = {
 const DATAFILE_PARENTS = ['site_info', 'pi_info', 'study_info', 'subject_info', 'session_info', 'series_info']
 
 export const DataFileTree = props => {
-  const { debounceDelay, subjectOrder, multiple, disabled } = props
+  const { debounceDelay, dataOrder, multiple, disabled } = props
 
   let axiosCancelSource
   const [treeData, setTreeData] = useState([])
@@ -74,7 +76,9 @@ export const DataFileTree = props => {
   })
 
   useEffect(() => {
-    debouncedSearch(searchValue, 1)
+    if (!isEmpty(searchValue)) {
+      debouncedSearch(searchValue, 1)
+    }
   }, [searchValue])
 
   useEffect(() => {
@@ -98,11 +102,11 @@ export const DataFileTree = props => {
   })
 
   useEffect(() => {
-    if (!isEmpty(subjectOrder)) {
+    if (!isEmpty(dataOrder)) {
       const treeDataSort = sortData([...treeData], true)
       setTreeData(treeDataSort)
     }
-  }, [subjectOrder])
+  }, [dataOrder])
 
   const setInitialValue = async initialValue => {
     const { analysis, multiple, onUpdateFields } = props
@@ -128,9 +132,11 @@ export const DataFileTree = props => {
       const createdNodes = createDataFileNodes(inputFiles)
       const selectedKeys = multiple ? map(createdNodes, 'id') : map(filter(createdNodes, 'isLeaf'), 'id')
 
-      setSelectedKeys(selectedKeys)
       props.onChange(inputFiles)
-      setSelectedFiles(inputFiles)
+      unstable_batchedUpdates(() => {
+        setSelectedKeys(selectedKeys)
+        setSelectedFiles(inputFiles)
+      })
 
       if (get(analysis, 'parameters.file.fields') && onUpdateFields) {
         const inputFile = first(inputFiles)
@@ -196,25 +202,28 @@ export const DataFileTree = props => {
     }
   }
 
-  const sortBySubject = (treeData, subjectTitles) => {
+  const sortBy = (treeData, dataOrder) => {
     return treeData.sort((a, b) => {
-      const aIncluded = subjectTitles.includes(a.title)
-      const bIncluded = subjectTitles.includes(b.title)
+      const aField = map(dataOrder, a.field)
+      const bField = map(dataOrder, b.field)
 
-      if (aIncluded && bIncluded) return subjectTitles.indexOf(a.title) - subjectTitles.indexOf(b.title)
-      if (aIncluded) return -1
-      if (bIncluded) return 1
+      if (!isEmpty(aField) && !isEmpty(bField)) {
+        const aIncluded = aField.includes(a.title)
+        const bIncluded = bField.includes(b.title)
 
+        if (aIncluded && bIncluded) return aField.indexOf(a.title) - bField.indexOf(b.title)
+        if (aIncluded) return -1
+        if (bIncluded) return 1
+      }
       return a.title.localeCompare(b.title)
     })
   }
 
   const sortData = (treeData, isLocaleCompare = false) => {
-    const { subjectOrder } = props
-    const subjectTitles = map(subjectOrder, 'subject')
+    const { dataOrder } = props
 
-    if (!isEmpty(subjectTitles)) {
-      return sortBySubject(treeData, subjectTitles)
+    if (!isEmpty(dataOrder)) {
+      return sortBy(treeData, dataOrder)
     } else if (isLocaleCompare) {
       return treeData.sort((a, b) => !isEmpty(a.title) && !isEmpty(b.title) && a.title.localeCompare(b.title))
     } else {
@@ -320,10 +329,11 @@ export const DataFileTree = props => {
     })
 
     const mapNewNodes = map(uniq(newNodes), 'id')
-    const treeDataSort = sortData(nodes)
 
-    setTreeData(treeDataSort)
-    setExpandedKeys(uniq(expandedKeys.concat(mapNewNodes)))
+    unstable_batchedUpdates(() => {
+      setTreeData(nodes)
+      setExpandedKeys(uniq(expandedKeys.concat(mapNewNodes)))
+    })
 
     return newNodes
   }
@@ -341,7 +351,7 @@ export const DataFileTree = props => {
   const handleRowMove = (oldIndex, newIndex) => {
     const sortSelectedFiles = arrayMove(selectedFiles, oldIndex, newIndex)
     const sortOrder = map(sortSelectedFiles, 'subject_info.anon_id')
-    const sortTreeData = sortBySubject(treeData, sortOrder)
+    const sortTreeData = sortBy(treeData, sortOrder)
 
     setTreeData(sortTreeData)
     setSelectedFiles([...sortSelectedFiles])
@@ -363,7 +373,7 @@ export const DataFileTree = props => {
     const node = extra.triggerNode
 
     if (isSearching) {
-      newSelectedKeys = filter(newSelectedKeys, key => key.includes(searchValue))
+      newSelectedKeys = filter(newSelectedKeys, key => key.toLowerCase().includes(searchValue.toLowerCase()))
     }
 
     setSelectedKeys(newSelectedKeys)
@@ -428,10 +438,55 @@ export const DataFileTree = props => {
     }
   }
 
+  const handleSelectDataOrderFile = async () => {
+    setLoading(true)
+
+    const { dataOrder } = props
+    const dataOrderFiles = map(dataOrder, 'datafile')
+    const analysisTypeFilter = getAdditionalFilters()
+    const searchPromises = dataOrderFiles.map(datafileName =>
+      getDataFile({ ...analysisTypeFilter, name: datafileName, pageSize: MAX_SELECT_FILES }),
+    )
+
+    const responses = await Promise.all(searchPromises)
+    const results = responses.map(res => get(res, 'data.results'))
+
+    // For each dataOrder row, get the best match search response.
+    const searchResult = zipWith(dataOrder, results, (row, rowSearchResponse) => {
+      const bestMatch = rowSearchResponse.filter(resultEntry => {
+        if (row.subject && row.subject !== resultEntry.subject_info.anon_id) return false
+        if (row.session && row.session !== resultEntry.session_info.segment_interval) return false
+        if (row.series && row.series !== resultEntry.series_info.label) return false
+        return true
+      })
+      return first(bestMatch)
+    })
+
+    const newSelectedNodes = createDataFileNodes(filter(searchResult))
+    const allSelectedLeafNodes = filter(newSelectedNodes, 'isLeaf')
+    const selectedKeys = map(allSelectedLeafNodes, 'id')
+    const selectedFiles = map(allSelectedLeafNodes, 'elem')
+
+    props.onChange(selectedFiles)
+    unstable_batchedUpdates(() => {
+      setSelectedKeys(selectedKeys)
+      setSelectedFiles(selectedFiles)
+      setLoading(false)
+    })
+  }
+
+  const hasDataFileInDataOrder = !isEmpty(get(dataOrder, '0.datafile'))
+  const noFileSelected = isEmpty(selectedFiles)
+
   return (
     <Spin spinning={loading}>
       <div style={{ position: 'relative' }}>
-        {!isEmpty(selectedFiles) && (
+        {hasDataFileInDataOrder && noFileSelected && (
+          <Button disabled={loading} value="large" style={{ margin: '10px 0px' }} onClick={handleSelectDataOrderFile}>
+            Select file by Metadata
+          </Button>
+        )}
+        {!noFileSelected && (
           <Switch
             checkedChildren="Sort Table"
             unCheckedChildren="Sort Table"
@@ -451,8 +506,10 @@ export const DataFileTree = props => {
           />
         ) : (
           <>
-            {!isEmpty(selectedFiles) && (
-              <span className="items-selected-count">{selectedFiles.length} files selected</span>
+            {!noFileSelected && (
+              <span style={{ marginTop: 30 }} className="items-selected-count">
+                {selectedFiles.length} files selected
+              </span>
             )}
             <TreeSelect
               onScroll={handleScroll}
@@ -498,7 +555,7 @@ DataFileTree.propTypes = {
   name: PropTypes.string,
   initialValue: PropTypes.oneOfType([PropTypes.array, PropTypes.number, inputFileShape]),
   multiple: PropTypes.bool,
-  subjectOrder: PropTypes.array,
+  dataOrder: PropTypes.array,
   onChange: PropTypes.func,
   onUpdateFields: PropTypes.func,
   debounceDelay: PropTypes.number,
@@ -508,7 +565,7 @@ DataFileTree.defaultProps = {
   name: 'default',
   multiple: false,
   disabled: false,
-  subjectOrder: [],
+  dataOrder: [],
   debounceDelay: 300, // 300 ms.
 }
 
