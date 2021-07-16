@@ -2,7 +2,7 @@ import React, { Fragment, useState } from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { createStructuredSelector } from 'reselect'
-import { Col, Divider, Form, Row } from 'antd'
+import { Col, Divider, Form, Row, Switch } from 'antd'
 import { get } from 'lodash'
 import {
   listUploadableStudy,
@@ -27,7 +27,8 @@ export const GroupICAUploadSection = props => {
     sitesStatus,
   } = props
 
-  const [subjectOrder, setSubjectOrder] = useState([])
+  const [dataOrder, setDataOrder] = useState([])
+  const [isMetadataSelected, setIsMetadataSelected] = useState(false)
 
   const inputFile = get(analysis, 'parameters.analysis.options.files.value')
 
@@ -46,18 +47,34 @@ export const GroupICAUploadSection = props => {
 
   return (
     <Row>
+      <Col style={{ textAlign: 'right' }}>
+        <Switch
+          checkedChildren="GICA Metadata"
+          unCheckedChildren="GICA Metadata"
+          checked={isMetadataSelected}
+          onChange={setIsMetadataSelected}
+        />
+      </Col>
       <Col>
-        <Fragment>
-          <MetadataEditor onChange={metadata => setSubjectOrder(get(metadata, 'result'))} />
-        </Fragment>
+        {isMetadataSelected && (
+          <Fragment>
+            <MetadataEditor
+              allowedHeaders={['subject', 'session', 'series', 'datafile']}
+              onChange={metadata => setDataOrder(get(metadata, 'results'))}
+            />
+            <Divider style={{ marginTop: 36 }} />
+          </Fragment>
+        )}
       </Col>
       {showSelector && (
         <Col>
-          <Divider style={{ marginTop: 36 }} />
-          <FormItem label="And select a previously uploaded/output dataset:" style={{ fontSize: 18 }}>
+          <FormItem
+            label={`${isMetadataSelected ? 'And select' : 'Select'} a previously uploaded/output dataset:`}
+            style={{ fontSize: 18 }}
+          >
             <DataFileTree
               multiple
-              subjectOrder={subjectOrder}
+              dataOrder={dataOrder}
               analysisType={analysisType}
               analysis={analysis}
               initialValue={inputFile}
