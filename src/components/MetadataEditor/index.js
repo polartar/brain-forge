@@ -1,8 +1,22 @@
 import React, { Fragment, useEffect, useState } from 'react'
 import { PropTypes } from 'prop-types'
 import Papa from 'papaparse'
-import { Form, Table, Radio, Alert } from 'antd'
-import { concat, first, filter, each, map, get, times, uniqBy, size, zipObject, isEmpty, isArray } from 'lodash'
+import { Form, Table, Radio, Icon, Tooltip, Alert } from 'antd'
+import {
+  concat,
+  first,
+  filter,
+  each,
+  map,
+  get,
+  times,
+  uniqBy,
+  size,
+  zipObject,
+  isEmpty,
+  isEqual,
+  isArray,
+} from 'lodash'
 import { connect } from 'react-redux'
 import { MiscFileTree } from 'components'
 import { createStructuredSelector } from 'reselect'
@@ -16,7 +30,7 @@ const { Item: FormItem } = Form
 const MAX_NUM_FILTER_OPTIONS = 10
 
 export const MetadataEditor = props => {
-  const { analysisOptions, metadata, dataFilesStatus, readOnly } = props
+  const { analysisOptions, allowedHeaders, metadata, dataFilesStatus, readOnly } = props
 
   const selectedMetadata = get(analysisOptions, 'Metadata.value')
 
@@ -108,8 +122,13 @@ export const MetadataEditor = props => {
         uniqValues.length < MAX_NUM_FILTER_OPTIONS
           ? map(uniqValues, val => ({ text: get(val, key), value: get(val, key) }))
           : []
+
       return {
-        title: key,
+        title: (
+          <Fragment>
+            {key} {!allowedHeaders.includes(key) && <Icon type="warning" />}
+          </Fragment>
+        ),
         dataIndex: key,
         key: key,
         filters: colFilters,
@@ -122,7 +141,7 @@ export const MetadataEditor = props => {
     setTableColumns(tableColumns)
 
     props.onChange({
-      result: parsedMetadata,
+      results: parsedMetadata,
       tableColumns,
     })
   }
@@ -141,6 +160,8 @@ export const MetadataEditor = props => {
 
     props.getMetadata(filePath)
   }
+
+  const keyColumns = map(tableColumns, 'key')
 
   return (
     <Fragment>
@@ -183,9 +204,22 @@ export const MetadataEditor = props => {
 
       {existMetadata && (
         <Fragment>
-          <FormItem label="Metadata Table:">
+          <FormItem
+            colon={false}
+            label={
+              <span>
+                Metadata Table:{' '}
+                {!isEqual(keyColumns, allowedHeaders) && (
+                  <Tooltip placement="rightTop" title={`Only these columns are allowed: ${allowedHeaders.join(', ')}`}>
+                    <Icon style={{ fontSize: '16px', color: '#ffcf6f' }} type="warning" />
+                  </Tooltip>
+                )}
+              </span>
+            }
+          >
             <Table
               rowKey="uid"
+              scroll={{ x: '100%' }}
               pagination={{ pageSize: 5 }}
               columns={tableColumns}
               dataSource={metadataValue}
@@ -214,6 +248,7 @@ const actions = {
 
 MetadataEditor.propTypes = {
   analysisOptions: PropTypes.object,
+  allowedHeaders: PropTypes.array,
   studies: PropTypes.array,
   readOnly: PropTypes.bool,
   metadata: PropTypes.string,
@@ -225,6 +260,7 @@ MetadataEditor.propTypes = {
 
 MetadataEditor.defaultProps = {
   readOnly: false,
+  allowedHeaders: [],
   onChange: () => {},
 }
 
