@@ -8,6 +8,11 @@ This repository is for Brainforge frontend project. React(https://reactjs.org/) 
 
 ### How do I setup?
 
+Clone this project from git
+
+  ```
+  git clone https://github.com/talentdev2020/brain-forge.git
+  ```
 #### Install dependencies and configure
 
 - Install node packages<br>
