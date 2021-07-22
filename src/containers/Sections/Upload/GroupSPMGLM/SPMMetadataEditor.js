@@ -4,7 +4,7 @@ import PropTypes from 'prop-types'
 import { Button, Col, Form, Row, Radio, Input } from 'antd'
 import { connect } from 'react-redux'
 import { createStructuredSelector } from 'reselect'
-import { find, flatten, get, map } from 'lodash'
+import { find, flatten, get, isEmpty, map } from 'lodash'
 import { selectAnalysisOptions, setAnalysisOption } from 'store/modules/analyses'
 import { setCurrentFiles } from 'store/modules/datafiles'
 import { Loader, MetadataEditor } from 'components'
@@ -42,13 +42,14 @@ export const SPMMetadataEditor = props => {
 
     const scansSource = get(analysisOptions, 'Scans_Source.value')
     const data = get(metadata, 'result')
-    const fileSubjects = map(data, targetMetaColumn)
+    const fileSearchValues = map(data, targetMetaColumn)
+
     setLoadingScans(true)
 
     // Send all the file search requests.
     // Wait for the response and process at the same time.
     if (scansSource === 'datafile') {
-      const axiosRequests = map(fileSubjects, subject => getDataFile({ files: subject, pageSize: 1000 }))
+      const axiosRequests = map(fileSearchValues, value => getDataFile({ files: value, pageSize: 1000 }))
 
       axios.all(axiosRequests).then(
         axios.spread((...args) => {
@@ -62,8 +63,8 @@ export const SPMMetadataEditor = props => {
         }),
       )
     } else {
-      const axiosRequests = map(fileSubjects, subject =>
-        getAnalysisOutput({ [targetFieldSearch]: subject, all_files: targetFileName }),
+      const axiosRequests = map(fileSearchValues, value =>
+        getAnalysisOutput({ [targetFieldSearch]: value, all_files: targetFileName }),
       )
 
       axios.all(axiosRequests).then(
@@ -113,7 +114,7 @@ export const SPMMetadataEditor = props => {
   return (
     <Fragment>
       <MetadataEditor onChange={metadata => setMetadata(metadata)} />
-      {get(metadata, 'result') && (
+      {!isEmpty(get(metadata, 'rows')) && (
         <Fragment>
           <FormItem label="Please select a target Group Scan">
             <Radio.Group className="w-100" onChange={e => setTargetGroupScan(e.target.value)} value={targetGroupScan}>
@@ -126,7 +127,13 @@ export const SPMMetadataEditor = props => {
           </FormItem>
           {targetGroupScan && (
             <Fragment>
-              <FormItem label={`Please select the File Column to create ${targetGroupScan}`}>
+              <FormItem
+                label={
+                  <span>
+                    Please select the File Column to create <strong>{targetGroupScan}</strong>
+                  </span>
+                }
+              >
                 <Radio.Group
                   className="w-100"
                   value={targetMetaColumn}
@@ -141,7 +148,13 @@ export const SPMMetadataEditor = props => {
               </FormItem>
               {targetMetaColumn && (
                 <Fragment>
-                  <FormItem label={`Please select the level to search for ${targetMetaColumn}`}>
+                  <FormItem
+                    label={
+                      <span>
+                        Please select the level to search for <strong>{targetMetaColumn}</strong>
+                      </span>
+                    }
+                  >
                     <Radio.Group
                       className="w-100"
                       value={targetFieldSearch}
@@ -155,10 +168,16 @@ export const SPMMetadataEditor = props => {
                     </Radio.Group>
                   </FormItem>
                   {targetFieldSearch !== 'datafile' && (
-                    <FormItem label={`Please type the target datafile name in ${targetFieldSearch}`}>
+                    <FormItem
+                      label={
+                        <span>
+                          Please type the target datafile name pattern under <strong>{targetFieldSearch}</strong>
+                        </span>
+                      }
+                    >
                       <Input
                         value={targetFileName}
-                        placeholder="Please input target datafile name"
+                        placeholder="Please input target datafile name pattern"
                         onChange={evt => setTargetFileName(evt.target.value)}
                       />
                     </FormItem>
@@ -167,17 +186,19 @@ export const SPMMetadataEditor = props => {
               )}
             </Fragment>
           )}
-          <Row>
-            <Col md={8}>
-              <Button
-                className="w-100"
-                disabled={!targetGroupScan || !targetMetaColumn || loadingScans}
-                onClick={handleCreateGroup}
-              >
-                {loadingScans ? `Creating ${targetGroupScan} ...` : `Create ${targetGroupScan}`}
-              </Button>
-            </Col>
-          </Row>
+          {targetGroupScan && (
+            <Row>
+              <Col md={8}>
+                <Button
+                  className="w-100"
+                  disabled={!targetGroupScan || !targetMetaColumn || loadingScans}
+                  onClick={handleCreateGroup}
+                >
+                  {loadingScans ? `Creating ${targetGroupScan} ...` : `Create ${targetGroupScan}`}
+                </Button>
+              </Col>
+            </Row>
+          )}
         </Fragment>
       )}
     </Fragment>
