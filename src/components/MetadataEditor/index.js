@@ -1,23 +1,12 @@
 import React, { Fragment, useEffect, useState } from 'react'
+import { unstable_batchedUpdates } from 'react-dom'
 import { PropTypes } from 'prop-types'
+
 import Papa from 'papaparse'
-import { Form, Table, Radio, Icon, Tooltip, Alert } from 'antd'
-import {
-  concat,
-  first,
-  filter,
-  each,
-  map,
-  get,
-  times,
-  uniqBy,
-  size,
-  zipObject,
-  isEmpty,
-  isEqual,
-  isArray,
-} from 'lodash'
+import { Form, Table, Icon, Tooltip, Alert } from 'antd'
+import { first, filter, each, map, get, uniqBy, isEmpty, isEqual, isArray } from 'lodash'
 import { connect } from 'react-redux'
+
 import { MiscFileTree } from 'components'
 import { createStructuredSelector } from 'reselect'
 import { selectAnalysis, selectAnalysisOptions, setAnalysisOption } from 'store/modules/analyses'
@@ -34,8 +23,6 @@ export const MetadataEditor = props => {
 
   const selectedMetadata = get(analysisOptions, 'Metadata.value')
 
-  const [metaHeader, setMetaHeader] = useState(true)
-  const [metaDelimiter, setMetaDelimiter] = useState('')
   const [metadataValue, setMetadataValue] = useState([])
   const [metaErrors, setMetaErrors] = useState([])
   const [tableColumns, setTableColumns] = useState([])
@@ -51,11 +38,15 @@ export const MetadataEditor = props => {
 
   useEffect(() => {
     if (dataFilesStatus === successAction(GET_METADATA)) {
-      setExistMetadata(true)
-      setMetaErrors([])
+      unstable_batchedUpdates(() => {
+        setMetaErrors([])
+        setExistMetadata(true)
+      })
     } else if (dataFilesStatus === failAction(GET_METADATA)) {
-      setExistMetadata(false)
-      setMetaErrors('Failed to load CSV file')
+      unstable_batchedUpdates(() => {
+        setMetaErrors('Failed to load CSV file')
+        setExistMetadata(false)
+      })
     }
   }, [dataFilesStatus])
 
@@ -65,15 +56,13 @@ export const MetadataEditor = props => {
     } else {
       props.onChange({ result: [], tableColumns: [] })
     }
-  }, [existMetadata, metaHeader, metaDelimiter])
+  }, [existMetadata])
 
   const initMetadataTable = () => {
-    let columns = []
-    let parsedMetadata = []
     const papaOptions = {
       skipEmptyLines: true,
-      header: metaHeader,
-      delimiter: metaDelimiter,
+      header: true,
+      delimiter: '',
     }
 
     if (isEmpty(metadata)) return
@@ -84,35 +73,9 @@ export const MetadataEditor = props => {
 
     // Skip metadata rows that contains errors.
     each(metaErrors, error => !isEmpty(error.row) && (papaRes.data[error.row]['error'] = error))
-    parsedMetadata = filter(papaRes.data, row => !row.error)
+    const parsedMetadata = filter(papaRes.data, row => !row.error)
 
-    if (metaHeader) {
-      // If the first row is the column header, use papa parsed meta for this.
-      columns = papaRes.meta.fields
-    } else {
-      // Otherwise, create a list of column headers: col_1, col_2 ...
-      columns = times(size(first(parsedMetadata)), index => `col_${index}`)
-
-      // Search for errors in row with missing columns.
-      const errors = filter(
-        map(
-          parsedMetadata,
-          (row, index) =>
-            columns.length !== row.length && {
-              code: 'TooFewFields',
-              message: `Too few fields: expected ${columns.length} fields but parsed ${row.length}`,
-              row: index,
-              type: 'FieldMismatch',
-            },
-        ),
-      )
-      // Combine errors with Papaparse.
-      metaErrors = concat(metaErrors, errors)
-      // Exclude row that is missing columns.
-      parsedMetadata = filter(parsedMetadata, row => columns.length === row.length)
-      // Create a list of dict with keys from indexed columns and values from row.
-      parsedMetadata = map(parsedMetadata, row => zipObject(columns, row))
-    }
+    const columns = papaRes.meta.fields
 
     // Generate table columns with filter.
     const tableColumns = map(columns, key => {
@@ -126,7 +89,7 @@ export const MetadataEditor = props => {
       return {
         title: (
           <Fragment>
-            {key} {!allowedHeaders.includes(key) && <Icon type="warning" />}
+            {key} {allowedHeaders && !allowedHeaders.includes(key) && <Icon type="warning" />}
           </Fragment>
         ),
         dataIndex: key,
@@ -136,12 +99,14 @@ export const MetadataEditor = props => {
       }
     })
 
-    setMetadataValue(parsedMetadata)
-    setMetaErrors(metaErrors)
-    setTableColumns(tableColumns)
+    unstable_batchedUpdates(() => {
+      setMetadataValue(parsedMetadata)
+      setMetaErrors(metaErrors)
+      setTableColumns(tableColumns)
+    })
 
     props.onChange({
-      results: parsedMetadata,
+      rows: parsedMetadata,
       tableColumns,
     })
   }
@@ -152,12 +117,14 @@ export const MetadataEditor = props => {
 
   const handleMiscFileChange = data => {
     handleSetOption('Metadata', 'value', data)
-    setTableColumns(null)
-    setExistMetadata(false)
-    setMetaErrors([])
+
+    unstable_batchedUpdates(() => {
+      setTableColumns(null)
+      setExistMetadata(false)
+      setMetaErrors([])
+    })
 
     const filePath = get(data, 'path')
-
     props.getMetadata(filePath)
   }
 
@@ -165,7 +132,7 @@ export const MetadataEditor = props => {
 
   return (
     <Fragment>
-      <FormItem label="Select a Metadata file (optional)" style={{ fontSize: 18 }}>
+      <FormItem>
         <MiscFileTree initialValue={get(selectedMetadata, 'id')} onChange={data => handleMiscFileChange(first(data))} />
       </FormItem>
 
@@ -176,57 +143,28 @@ export const MetadataEditor = props => {
       )}
 
       {existMetadata && (
-        <Fragment>
-          <FormItem label="Please choose header mode">
-            <Radio.Group disabled={readOnly} onChange={e => setMetaHeader(e.target.value)} value={metaHeader}>
-              <Radio value={true}>First row header</Radio>
-              <Radio value={false}>No header row</Radio>
-            </Radio.Group>
-          </FormItem>
-          <FormItem label="Please choose separation character">
-            <Radio.Group value={metaDelimiter} disabled={readOnly} onChange={e => setMetaDelimiter(e.target.value)}>
-              <Radio key="1" value="">
-                Auto-detect Delimiter
-              </Radio>
-              <Radio key="2" value=",">
-                Comma
-              </Radio>
-              <Radio key="3" value=" ">
-                Space
-              </Radio>
-              <Radio key="4" value="\t">
-                Tab
-              </Radio>
-            </Radio.Group>
-          </FormItem>
-        </Fragment>
-      )}
-
-      {existMetadata && (
-        <Fragment>
-          <FormItem
-            colon={false}
-            label={
-              <span>
-                Metadata Table:{' '}
-                {!isEqual(keyColumns, allowedHeaders) && (
-                  <Tooltip placement="rightTop" title={`Only these columns are allowed: ${allowedHeaders.join(', ')}`}>
-                    <Icon style={{ fontSize: '16px', color: '#ffcf6f' }} type="warning" />
-                  </Tooltip>
-                )}
-              </span>
-            }
-          >
-            <Table
-              rowKey="uid"
-              scroll={{ x: '100%' }}
-              pagination={{ pageSize: 5 }}
-              columns={tableColumns}
-              dataSource={metadataValue}
-              size="small"
-            />
-          </FormItem>
-        </Fragment>
+        <FormItem
+          colon={false}
+          label={
+            <span>
+              Metadata Table:{' '}
+              {allowedHeaders && !isEqual(keyColumns, allowedHeaders) && (
+                <Tooltip placement="rightTop" title={`Only these columns are allowed: ${allowedHeaders.join(', ')}`}>
+                  <Icon style={{ fontSize: '16px', color: '#ffcf6f' }} type="warning" />
+                </Tooltip>
+              )}
+            </span>
+          }
+        >
+          <Table
+            rowKey="uid"
+            scroll={{ x: '100%' }}
+            pagination={{ pageSize: 5 }}
+            columns={tableColumns}
+            dataSource={metadataValue}
+            size="small"
+          />
+        </FormItem>
       )}
     </Fragment>
   )
@@ -260,7 +198,7 @@ MetadataEditor.propTypes = {
 
 MetadataEditor.defaultProps = {
   readOnly: false,
-  allowedHeaders: [],
+  allowedHeaders: null,
   onChange: () => {},
 }
 
