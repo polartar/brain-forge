@@ -125,6 +125,7 @@ export default class CovariateConfigurationTable extends Component {
         pagination: false,
         bordered: true,
         className,
+        scroll: { x: true },
       },
       !readOnly && {
         title: () => `Configure covariates for ${file.name} (click to toggle)`,
