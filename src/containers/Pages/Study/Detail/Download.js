@@ -4,11 +4,11 @@ import { Alert, Button, Form, Switch, notification } from 'antd'
 import axios from 'axios'
 import { get } from 'lodash'
 import pluralize from 'pluralize'
-import { AsyncSelect, Select, Option } from 'components'
+import { AsyncSelect } from 'components'
 
 const { Item: FormItem } = Form
 
-const Download = ({ study, analysisTypes }) => {
+const Download = ({ study }) => {
   const [includeData, setIncludeData] = useState(true)
   const [includeResult, setIncludeResult] = useState(false)
   const [subject, setSubject] = useState([])
@@ -36,15 +36,6 @@ const Download = ({ study, analysisTypes }) => {
       setDownloadInfo(null)
     }
   }, [subject, session, series, analysisType])
-
-  useEffect(() => {
-    setSession([])
-    setSeries([])
-  }, [subject])
-
-  useEffect(() => {
-    setSeries([])
-  }, [session])
 
   useEffect(() => {
     if (!includeData) {
@@ -250,21 +241,26 @@ const Download = ({ study, analysisTypes }) => {
 
           {includeResult && (
             <FormItem label="Analysis Type" {...formItemLayout}>
-              <Select
+              <AsyncSelect
                 placeholder="Analysis Type"
+                fetchUrl={{
+                  base: '/data-directory-filter/analysistype/',
+                  queryParams: Object.assign(
+                    {
+                      uniq: 'on',
+                      subject: subject.join(','),
+                      session: session.join(','),
+                    },
+                    series.length > 0 && { series: series.join(',') },
+                  ),
+                }}
                 value={analysisType}
-                className="w-100"
+                disabled={isGettingInfo || subject.length === 0 || session.length === 0}
                 mode="multiple"
-                allowClear
-                disabled={analysisTypes.length === 0}
+                searchByDefault
+                showSelectAll
                 onChange={setAnalysisType}
-              >
-                {analysisTypes.map(anaysisType => (
-                  <Option key={anaysisType.id} value={anaysisType.id}>
-                    {anaysisType.name}
-                  </Option>
-                ))}
-              </Select>
+              />
             </FormItem>
           )}
 
@@ -290,7 +286,6 @@ const Download = ({ study, analysisTypes }) => {
 }
 
 Download.propTypes = {
-  analysisTypes: PropTypes.array,
   study: PropTypes.object,
 }
 

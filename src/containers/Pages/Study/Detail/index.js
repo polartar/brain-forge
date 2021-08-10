@@ -22,7 +22,6 @@ import {
   LIST_SITE,
   GET_STUDY,
 } from 'store/modules/sites'
-import { selectAnalysisTypes } from 'store/modules/analyses'
 import { PageLayout } from 'containers/Layouts'
 import { PreprocessingSummaryTable } from 'containers'
 import { Loader } from 'components'
@@ -36,7 +35,6 @@ const { TabPane } = Tabs
 
 export class StudyDetailPage extends Component {
   static propTypes = {
-    analysisTypes: PropTypes.array,
     user: PropTypes.object,
     users: PropTypes.array,
     sites: PropTypes.array,
@@ -71,7 +69,7 @@ export class StudyDetailPage extends Component {
       return <Loader />
     }
 
-    const { analysisTypes, study, user, users, status, updateStudy } = this.props
+    const { study, user, users, status, updateStudy } = this.props
 
     if (!study) {
       return null
@@ -109,7 +107,7 @@ export class StudyDetailPage extends Component {
               <SharedUsers {...subProps} />
             </TabPane>
             <TabPane tab="Download" key="download">
-              <Download {...subProps} analysisTypes={analysisTypes} />
+              <Download {...subProps} />
             </TabPane>
           </Tabs>
         </Card>
@@ -119,7 +117,6 @@ export class StudyDetailPage extends Component {
 }
 
 const selectors = createStructuredSelector({
-  analysisTypes: selectAnalysisTypes,
   users: selectUsers,
   user: selectLoggedInUser,
   sites: selectSites,
