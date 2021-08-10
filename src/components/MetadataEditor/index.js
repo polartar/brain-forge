@@ -10,7 +10,7 @@ import { connect } from 'react-redux'
 import { MiscFileTree } from 'components'
 import { createStructuredSelector } from 'reselect'
 import { selectAnalysis, selectAnalysisOptions, setAnalysisOption } from 'store/modules/analyses'
-import { getMetadata, selectMetadata, selectDataFilesStatus, setCurrentFiles } from 'store/modules/datafiles'
+import { getMetadata, selectMetadata, selectDataFilesStatus } from 'store/modules/datafiles'
 import { failAction, successAction } from 'utils/state-helpers'
 import { selectUploadableStudies } from 'store/modules/sites'
 import { GET_METADATA } from 'store/modules/datafiles/actions'
@@ -19,7 +19,7 @@ const { Item: FormItem } = Form
 const MAX_NUM_FILTER_OPTIONS = 10
 
 export const MetadataEditor = props => {
-  const { analysisOptions, allowedHeaders, metadata, dataFilesStatus, readOnly } = props
+  const { analysisOptions, allowedHeaders, metadata, dataFilesStatus } = props
 
   const selectedMetadata = get(analysisOptions, 'Metadata.value')
 
@@ -115,8 +115,9 @@ export const MetadataEditor = props => {
     props.setAnalysisOption({ name: optionName, option: { [parameterName]: value } })
   }
 
-  const handleMiscFileChange = data => {
-    handleSetOption('Metadata', 'value', data)
+  const handleMiscFileChange = files => {
+    const option = first(files)
+    handleSetOption('Metadata', 'value', option)
 
     unstable_batchedUpdates(() => {
       setTableColumns(null)
@@ -124,16 +125,17 @@ export const MetadataEditor = props => {
       setMetaErrors([])
     })
 
-    const filePath = get(data, 'path')
+    const filePath = get(option, 'path')
     props.getMetadata(filePath)
+    props.onFileChange(files)
   }
 
   const keyColumns = map(tableColumns, 'key')
 
   return (
     <Fragment>
-      <FormItem>
-        <MiscFileTree initialValue={get(selectedMetadata, 'id')} onChange={data => handleMiscFileChange(first(data))} />
+      <FormItem label="Select a Metadata file (optional)">
+        <MiscFileTree initialValue={get(selectedMetadata, 'id')} onChange={handleMiscFileChange} />
       </FormItem>
 
       {!isEmpty(metaErrors) && (
@@ -181,7 +183,6 @@ const selectors = createStructuredSelector({
 const actions = {
   setAnalysisOption,
   getMetadata,
-  setCurrentFiles,
 }
 
 MetadataEditor.propTypes = {
@@ -194,12 +195,14 @@ MetadataEditor.propTypes = {
   getMetadata: PropTypes.func,
   setAnalysisOption: PropTypes.func,
   onChange: PropTypes.func,
+  onFileChange: PropTypes.func,
 }
 
 MetadataEditor.defaultProps = {
   readOnly: false,
   allowedHeaders: null,
   onChange: () => {},
+  onFileChange: () => {},
 }
 
 export default connect(

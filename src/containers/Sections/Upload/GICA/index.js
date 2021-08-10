@@ -2,7 +2,7 @@ import React, { Fragment, useState } from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { createStructuredSelector } from 'reselect'
-import { Col, Divider, Form, Row, Switch } from 'antd'
+import { Divider, Form, Row, Switch } from 'antd'
 import { get } from 'lodash'
 import {
   listUploadableStudy,
@@ -20,14 +20,14 @@ export const GroupICAUploadSection = props => {
   const {
     analysisType,
     analysis,
+    showSelector,
+    sitesStatus,
     updateCurrentFileFields,
     setAllFiles,
     setCurrentFiles,
-    showSelector,
-    sitesStatus,
   } = props
 
-  const [dataOrder, setDataOrder] = useState([])
+  const [dataOrder, setDataOrder] = useState()
   const [isMetadataSelected, setIsMetadataSelected] = useState(false)
 
   const inputFile = get(analysis, 'parameters.analysis.options.files.value')
@@ -46,32 +46,29 @@ export const GroupICAUploadSection = props => {
   }
 
   return (
-    <Row>
-      <Col style={{ textAlign: 'right' }}>
+    <>
+      <Row style={{ textAlign: 'right' }}>
         <Switch
           checkedChildren="GICA Metadata"
           unCheckedChildren="GICA Metadata"
           checked={isMetadataSelected}
           onChange={setIsMetadataSelected}
         />
-      </Col>
-      <Col>
+      </Row>
+      <Row>
         {isMetadataSelected && (
           <Fragment>
             <MetadataEditor
               allowedHeaders={['subject', 'session', 'series', 'datafile']}
-              onChange={metadata => setDataOrder(get(metadata, 'results'))}
+              onChange={metadata => setDataOrder(get(metadata, 'rows'))}
             />
             <Divider style={{ marginTop: 36 }} />
           </Fragment>
         )}
-      </Col>
+      </Row>
       {showSelector && (
-        <Col>
-          <FormItem
-            label={`${isMetadataSelected ? 'And select' : 'Select'} a previously uploaded/output dataset:`}
-            style={{ fontSize: 18 }}
-          >
+        <Row>
+          <FormItem style={{ fontSize: 18 }}>
             <DataFileTree
               multiple
               dataOrder={dataOrder}
@@ -82,9 +79,9 @@ export const GroupICAUploadSection = props => {
               onUpdateFields={updateCurrentFileFields}
             />
           </FormItem>
-        </Col>
+        </Row>
       )}
-    </Row>
+    </>
   )
 }
 

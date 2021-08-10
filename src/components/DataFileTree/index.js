@@ -8,6 +8,7 @@ import {
   debounce,
   find,
   filter,
+  findIndex,
   first,
   get,
   has,
@@ -102,11 +103,11 @@ export const DataFileTree = props => {
   })
 
   useEffect(() => {
-    if (!isEmpty(dataOrder)) {
-      const treeDataSort = sortData([...treeData], true)
+    if (dataOrder) {
+      const treeDataSort = sortData(treeData)
       setTreeData(treeDataSort)
     }
-  }, [dataOrder])
+  }, [dataOrder, selectedKeys])
 
   const setInitialValue = async initialValue => {
     const { analysis, multiple, onUpdateFields } = props
@@ -202,34 +203,43 @@ export const DataFileTree = props => {
     }
   }
 
-  const sortBy = (treeData, dataOrder) => {
+  const sortBy = treeData => {
     return treeData.sort((a, b) => {
-      const aField = map(dataOrder, a.field)
-      const bField = map(dataOrder, b.field)
+      if (a.field === b.field) {
+        const aIndex = findIndex(dataOrder, { [a.field]: a.title })
+        const bIndex = findIndex(dataOrder, { [b.field]: b.title })
 
-      if (!isEmpty(aField) && !isEmpty(bField)) {
-        const aIncluded = aField.includes(a.title)
-        const bIncluded = bField.includes(b.title)
-
-        if (aIncluded && bIncluded) return aField.indexOf(a.title) - bField.indexOf(b.title)
-        if (aIncluded) return -1
-        if (bIncluded) return 1
+        if (aIndex > -1 || bIndex > -1) return aIndex - bIndex
       }
-      return a.title.localeCompare(b.title)
+
+      // Keep the same order if unspecified.
+      const aCurrentIndex = findIndex(treeData, { id: a.id })
+      const bCurrentIndex = findIndex(treeData, { id: b.id })
+      return aCurrentIndex - bCurrentIndex
     })
   }
 
-  const sortData = (treeData, isLocaleCompare = false) => {
-    const { dataOrder } = props
-
-    if (!isEmpty(dataOrder)) {
-      return sortBy(treeData, dataOrder)
-    } else if (isLocaleCompare) {
-      return treeData.sort((a, b) => !isEmpty(a.title) && !isEmpty(b.title) && a.title.localeCompare(b.title))
+  const sortData = treeData => {
+    if (dataOrder) {
+      return sortBy(treeData)
     } else {
-      return treeData.sort(
-        (a, b) => !isEmpty(a.title) && !isEmpty(b.title) && last(a.title.split('_')) - last(b.title.split('_')),
-      )
+      // Default sorting if no dataOrder is specified.
+      return treeData.sort((a, b) => {
+        // Sort study according to hrrc_num.
+        if (a.field === 'study' && b.field === 'study') {
+          const aHrrc = last(a.title.split('_'))
+          const bHrrc = last(b.title.split('_'))
+
+          if (isInteger(aHrrc) & isInteger(bHrrc)) {
+            return parseInt(aHrrc) - parseInt(bHrrc)
+          }
+        }
+
+        // Keep the same order if unspecified.
+        const aCurrentIndex = findIndex(treeData, { id: a.id })
+        const bCurrentIndex = findIndex(treeData, { id: b.id })
+        return aCurrentIndex - bCurrentIndex
+      })
     }
   }
 
@@ -261,7 +271,7 @@ export const DataFileTree = props => {
       }
     })
 
-    const treeDataSort = isSearching ? newTreeData : sortData(newTreeData, true)
+    const treeDataSort = isSearching ? newTreeData : sortData(newTreeData)
     setTreeData(treeDataSort)
   }
 
@@ -441,11 +451,15 @@ export const DataFileTree = props => {
   const handleSelectDataOrderFile = async () => {
     setLoading(true)
 
-    const { dataOrder } = props
-    const dataOrderFiles = map(dataOrder, 'datafile')
-    const analysisTypeFilter = getAdditionalFilters()
-    const searchPromises = dataOrderFiles.map(datafileName =>
-      getDataFile({ ...analysisTypeFilter, name: datafileName, pageSize: MAX_SELECT_FILES }),
+    const searchPromises = dataOrder.map(row =>
+      getDataFile({
+        name: row.datafile,
+        pageSize: MAX_SELECT_FILES,
+        // NOTE: not including series as it can be too long.
+        ...(row.session && { session_label: row.session }),
+        ...(row.subject && { subject_label: row.subject }),
+        ...(row.study && { study_label: row.study }),
+      }),
     )
 
     const responses = await Promise.all(searchPromises)
@@ -453,12 +467,15 @@ export const DataFileTree = props => {
 
     // For each dataOrder row, get the best match search response.
     const searchResult = zipWith(dataOrder, results, (row, rowSearchResponse) => {
+      if (rowSearchResponse.length === 1) return first(rowSearchResponse)
+
       const bestMatch = rowSearchResponse.filter(resultEntry => {
         if (row.subject && row.subject !== resultEntry.subject_info.anon_id) return false
         if (row.session && row.session !== resultEntry.session_info.segment_interval) return false
         if (row.series && row.series !== resultEntry.series_info.label) return false
         return true
       })
+
       return first(bestMatch)
     })
 
@@ -492,11 +509,16 @@ export const DataFileTree = props => {
             unCheckedChildren="Sort Table"
             style={{
               position: 'absolute',
-              top: '-31px',
+              top: 10,
               right: 0,
             }}
             onChange={() => setTableSwitched(!tableSwitched)}
           />
+        )}
+        {!noFileSelected && (
+          <span style={{ marginTop: 30 }} className="items-selected-count">
+            {selectedFiles.length} files selected
+          </span>
         )}
         {tableSwitched ? (
           <SortTable
@@ -505,36 +527,29 @@ export const DataFileTree = props => {
             onChange={(oldIndex, newIndex) => handleRowMove(oldIndex, newIndex)}
           />
         ) : (
-          <>
-            {!noFileSelected && (
-              <span style={{ marginTop: 30 }} className="items-selected-count">
-                {selectedFiles.length} files selected
-              </span>
-            )}
-            <TreeSelect
-              onScroll={handleScroll}
-              allowClear
-              treeDataSimpleMode
-              autoClearSearchValue={false}
-              showSearch
-              searchValue={searchValue}
-              treeCheckable={multiple}
-              value={selectedKeys}
-              treeExpandedKeys={expandedKeys}
-              dropdownClassName={dropdownClassName}
-              className="w-100"
-              dropdownStyle={{ maxHeight: 400, overflow: 'auto' }}
-              placeholder="Please select"
-              treeData={treeData}
-              multiple={multiple}
-              disabled={disabled}
-              onSelect={handleNodeSelect}
-              onChange={handleTreeChange}
-              onTreeExpand={value => setExpandedKeys(uniq(value))}
-              onSearch={value => setSearchValue(value)}
-              loadData={loadData}
-            />
-          </>
+          <TreeSelect
+            onScroll={handleScroll}
+            allowClear
+            treeDataSimpleMode
+            showSearch
+            autoClearSearchValue={false}
+            searchValue={searchValue}
+            treeCheckable={multiple}
+            value={selectedKeys}
+            treeExpandedKeys={expandedKeys}
+            dropdownClassName={dropdownClassName}
+            className="w-100"
+            dropdownStyle={{ maxHeight: 400, overflow: 'auto' }}
+            placeholder="Please select"
+            treeData={treeData}
+            multiple={multiple}
+            disabled={disabled}
+            onSelect={handleNodeSelect}
+            onChange={handleTreeChange}
+            onTreeExpand={value => setExpandedKeys(uniq(value))}
+            onSearch={value => setSearchValue(value)}
+            loadData={loadData}
+          />
         )}
       </div>
     </Spin>
@@ -565,7 +580,7 @@ DataFileTree.defaultProps = {
   name: 'default',
   multiple: false,
   disabled: false,
-  dataOrder: [],
+  dataOrder: null,
   debounceDelay: 300, // 300 ms.
 }
 
